@@ -292,7 +292,7 @@ export default function Layout({ children, breakoutRoomsContent, showBreakoutPan
             <header className={`h-16 flex items-center justify-between flex-shrink-0 relative ${(showBreakoutPanel || showUsersPanel) ? 'px-6' : 'pl-6 pr-6'}`}>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium text-gray-700">
-                  {selectedRoom ? selectedRoom.name : `Main Session → ${currentView === 'teacher' ? 'Teacher' : 'Student'}`}
+                  {selectedRoom ? selectedRoom.name : 'Main Session'}
                 </div>
                 {!selectedRoom && (
                   <button

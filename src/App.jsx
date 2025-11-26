@@ -76,7 +76,9 @@ function App() {
   const [competitionQuestions, setCompetitionQuestions] = useState(''); // Questions for the learning competition
   const [parsedQuestions, setParsedQuestions] = useState([]); // Parsed question objects
   const [competitionDuration, setCompetitionDuration] = useState(5); // Duration in minutes
+  const [timeRemaining, setTimeRemaining] = useState(null); // Remaining time in seconds
   const [isCompetitionRunning, setIsCompetitionRunning] = useState(false); // Whether competition is active
+  const timerIntervalRef = useRef(null); // Timer interval reference
   const [currentView, setCurrentView] = useState('teacher'); // Current view: 'teacher' or 'student'
   const [competitionUsers, setCompetitionUsers] = useState([]); // User progress data for competition
   const [showCompetitionModal, setShowCompetitionModal] = useState(true); // Control modal visibility
@@ -378,9 +380,7 @@ function App() {
               );
             })}
           </div>
-        ) : (
-          <div className="text-sm text-gray-500 text-center py-8">No messages yet</div>
-        )}
+        ) : null}
       </div>
 
       {/* Input Area */}
@@ -530,6 +530,9 @@ function App() {
     setCompetitionUsers(sortedAlphabetically);
     setIsCompetitionRunning(true);
     setShowCompetitionModal(true); // Show modal when competition starts
+    
+    // Start countdown timer
+    setTimeRemaining(competitionDuration * 60); // Convert minutes to seconds
     // TODO: Implement competition start logic and real-time updates
   };
 
@@ -537,17 +540,23 @@ function App() {
     setShowEndConfirmation(true);
   };
 
+  // Get ranked list of students
+  const getRankedStudents = () => {
+    return [...competitionUsers].sort((a, b) => {
+      if (b.correct !== a.correct) return b.correct - a.correct;
+      if (b.completed !== a.completed) return b.completed - a.completed;
+      return a.fullName.localeCompare(b.fullName);
+    });
+  };
+
   const handleConfirmEnd = (shareResults) => {
     setIsCompetitionRunning(false);
     setShowEndConfirmation(false);
+    setTimeRemaining(null); // Stop timer
     
     if (shareResults) {
       // Sort users by correct answers (rank)
-      const sortedByRank = [...competitionUsers].sort((a, b) => {
-        if (b.correct !== a.correct) return b.correct - a.correct;
-        if (b.completed !== a.completed) return b.completed - a.completed;
-        return a.fullName.localeCompare(b.fullName);
-      });
+      const sortedByRank = getRankedStudents();
 
       // Format ranking message
       // Find longest name for alignment
@@ -773,7 +782,60 @@ function App() {
   }, [isCompetitionRunning, parsedQuestions.length]);
 
   const handleAddTime = (minutes) => {
+    const additionalSeconds = minutes * 60;
+    setTimeRemaining(prev => {
+      if (prev === null) return null;
+      const newTime = prev + additionalSeconds;
+      const maxSeconds = 60 * 60; // Cap at 60 minutes
+      return Math.min(newTime, maxSeconds);
+    });
     setCompetitionDuration(prev => Math.min(prev + minutes, 60)); // Cap at 60 minutes
+  };
+
+  // Countdown timer effect - runs continuously during competition
+  useEffect(() => {
+    if (!isCompetitionRunning || timeRemaining === null) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Only start timer if not already running
+    if (timerIntervalRef.current) {
+      return;
+    }
+
+    // Start countdown
+    timerIntervalRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev === null || prev <= 1) {
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
+          return prev === null ? null : 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Cleanup
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, [isCompetitionRunning]); // Only depend on isCompetitionRunning, not timeRemaining
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    if (seconds === null) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleStudentAnswerUpdate = (studentName, answers, questions) => {
@@ -840,6 +902,9 @@ function App() {
         return user;
       });
     });
+    
+    // Don't close modal here - let the user see the "Answers Submitted!" screen
+    // Modal will close when they click "Done" button
   };
 
 
@@ -934,6 +999,7 @@ function App() {
                 <p className="text-sm font-medium text-gray-800">
                   Would you like to share the results with the rest of the class?
                 </p>
+                
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => handleConfirmEnd(true)}
@@ -954,13 +1020,38 @@ function App() {
                     Cancel
                   </button>
                 </div>
+                
+                {/* Ranked Student List */}
+                <div className="bg-white rounded-lg p-3 max-h-64 overflow-y-auto">
+                  <div className="text-xs uppercase mb-2 font-semibold text-gray-700">
+                    LEARNING COMPETITION RESULTS
+                  </div>
+                  <div className="space-y-1">
+                    {getRankedStudents().map((user, index) => {
+                      const rank = index + 1;
+                      const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
+                      return (
+                        <div key={user.fullName} className="flex items-center justify-between text-sm py-1">
+                          <div className="flex items-center gap-2">
+                            {medal && <span>{medal}</span>}
+                            {!medal && <span className="text-gray-500 text-xs">{rank}.</span>}
+                            <span className="text-gray-800">{user.fullName}</span>
+                          </div>
+                          <span className="text-gray-600 font-medium ml-auto">{user.correct}/{user.completed}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
             <div className="bg-gray-100 rounded-lg p-3 mb-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-base font-medium text-gray-700">{competitionDuration} minutes</span>
+                  <span className={`text-base font-medium ${timeRemaining !== null && timeRemaining <= 60 ? 'text-red-600' : 'text-gray-700'}`}>
+                    {timeRemaining !== null ? formatTime(timeRemaining) : `${competitionDuration} minutes`}
+                  </span>
                   <button
                     onClick={handleEndCompetition}
                     className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5"
@@ -994,10 +1085,11 @@ function App() {
             </div>
           )}
 
-          {/* Leaderboard */}
-          {competitionUsers.length > 0 ? (
+          {/* Leaderboard - Only show when not showing confirmation dialog */}
+          {!showEndConfirmation && competitionUsers.length > 0 && (
             <CompetitionLeaderboard users={competitionUsers} />
-          ) : (
+          )}
+          {!showEndConfirmation && competitionUsers.length === 0 && (
             <div className="flex items-center justify-center text-sm text-gray-500 py-8">
               No participants yet
             </div>
@@ -1010,12 +1102,20 @@ function App() {
   return (
     <>
     {/* Competition Modal for Student View - Alice Anderson */}
-    {currentView === 'student' && isCompetitionRunning && parsedQuestions.length > 0 && (
+    {currentView === 'student' && isCompetitionRunning && parsedQuestions.length > 0 && showCompetitionModal && (
       <CompetitionModal
         isOpen={showCompetitionModal}
         questions={parsedQuestions}
         duration={competitionDuration}
-        onBackdropClick={() => setShowCompetitionModal(false)}
+        timeRemaining={timeRemaining}
+        onBackdropClick={() => {
+          // Allow closing modal (Done button uses this)
+          setShowCompetitionModal(false);
+        }}
+        onClose={() => {
+          // Also handle onClose for Done button
+          setShowCompetitionModal(false);
+        }}
         studentName="Alice Anderson"
         onSubmitAnswers={handleStudentAnswersSubmit}
         currentQuestionIndex={studentCurrentQuestionIndex}
@@ -1039,8 +1139,15 @@ function App() {
         if (newView === 'student') {
           setShowChatPanel(true);
           // Show modal when switching back to student view during active competition
+          // But only if Alice hasn't already submitted
           if (isCompetitionRunning && parsedQuestions.length > 0) {
-            setShowCompetitionModal(true);
+            const aliceUser = competitionUsers.find(user => user.fullName === 'Alice Anderson');
+            const aliceHasSubmitted = aliceUser && aliceUser.isCompleted === true;
+            if (!aliceHasSubmitted) {
+              setShowCompetitionModal(true);
+            } else {
+              setShowCompetitionModal(false);
+            }
           }
         }
         // When switching to teacher view during active competition, only show Learning Competition panel

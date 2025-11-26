@@ -4,6 +4,7 @@ export default function CompetitionModal({
   isOpen, 
   questions, 
   duration, 
+  timeRemaining: propTimeRemaining,
   onClose, 
   onBackdropClick, 
   studentName, 
@@ -22,41 +23,9 @@ export default function CompetitionModal({
   const answers = propAnswers !== undefined ? propAnswers : localAnswers;
   
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(duration * 60); // Convert minutes to seconds
-  const timerIntervalRef = useRef(null);
   
-  // Countdown timer effect
-  useEffect(() => {
-    if (!isOpen || isSubmitted) {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-      return;
-    }
-
-    // Reset timer when modal opens
-    setTimeRemaining(duration * 60);
-
-    // Start countdown
-    timerIntervalRef.current = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(timerIntervalRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    // Cleanup on unmount
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-    };
-  }, [isOpen, duration, isSubmitted]);
+  // Use timeRemaining from props if provided, otherwise calculate from duration
+  const timeRemaining = propTimeRemaining !== undefined ? propTimeRemaining : duration * 60;
 
   // Format time as MM:SS
   const formatTime = (seconds) => {
@@ -91,6 +60,8 @@ export default function CompetitionModal({
   const allQuestionsAnswered = questions.every(q => answers[q.id] && answers[q.id].trim() !== '');
 
   const handleAnswerChange = (value) => {
+    // Only update answers - do NOT auto-submit
+    // Submission only happens when user explicitly clicks the Submit button
     handleAnswersChange({
       ...answers,
       [currentQuestion.id]: value
@@ -202,13 +173,12 @@ export default function CompetitionModal({
             </div>
             <button
               onClick={() => {
-                if (onBackdropClick) {
-                  onBackdropClick();
-                }
+                // Switch back to review mode so user can review and edit answers
+                setIsSubmitted(false);
               }}
               className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
-              Done
+              Review
             </button>
           </div>
         ) : (
@@ -247,6 +217,12 @@ export default function CompetitionModal({
                     type="text"
                     value={currentAnswer}
                     onChange={(e) => handleAnswerChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      // Prevent Enter key from submitting - user must click Submit button
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                      }
+                    }}
                     placeholder="Enter your answer..."
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   />
@@ -270,10 +246,41 @@ export default function CompetitionModal({
               Previous
             </button>
 
-            <div className="flex flex-col items-center gap-1">
-              <div className="text-sm text-gray-600">
-                {currentQuestionIndex + 1} / {questions.length}
-              </div>
+            <div className="flex items-center">
+              {questions.map((question, index) => {
+                const isAnswered = answers[question.id] && answers[question.id].trim() !== '';
+                const isCurrent = index === currentQuestionIndex;
+                const isLast = index === questions.length - 1;
+                
+                return (
+                  <React.Fragment key={question.id}>
+                    <button
+                      onClick={() => handleQuestionIndexChange(index)}
+                      className={`flex items-center justify-center w-3 h-3 rounded-full transition-all cursor-pointer hover:scale-110 ${
+                        isCurrent
+                          ? 'bg-blue-600 ring-1 ring-blue-300'
+                          : isAnswered
+                          ? 'bg-green-500 hover:bg-green-600'
+                          : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      title={`Question ${index + 1}`}
+                    >
+                      {isAnswered && (
+                        <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    {!isLast && (
+                      <div
+                        className={`h-0.5 w-4 transition-colors ${
+                          isAnswered ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
 
             {isLastQuestion ? (

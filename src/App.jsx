@@ -1135,9 +1135,12 @@ function App() {
       onToggleView={() => {
         const newView = currentView === 'teacher' ? 'student' : 'teacher';
         setCurrentView(newView);
-        // Ensure chat panel is open when switching to student view
+        // Set initial panel state when switching to student view
         if (newView === 'student') {
+          // Start with chat panel open, close other panels
           setShowChatPanel(true);
+          setShowUsersPanel(false);
+          setShowBreakoutPanel(false);
           // Show modal when switching back to student view during active competition
           // But only if Alice hasn't already submitted
           if (isCompetitionRunning && parsedQuestions.length > 0) {
@@ -1174,20 +1177,34 @@ function App() {
         if (newValue) {
           // When opening users, close other panels
           setShowBreakoutPanel(false);
-          setShowChatPanel(false);
+          if (currentView === 'student') {
+            // In student view, close chat when opening users
+            setShowChatPanel(false);
+          } else {
+            setShowChatPanel(false);
+          }
         }
       }}
       chatContent={chatContent}
-      showChatPanel={currentView === 'student' ? true : showChatPanel}
+      showChatPanel={showChatPanel}
       onToggleChatPanel={() => {
-        // Don't allow closing chat panel in student view
-        if (currentView === 'student') return;
-        const newValue = !showChatPanel;
-        setShowChatPanel(newValue);
-        if (newValue) {
-          // When opening chat, close other panels
-          setShowBreakoutPanel(false);
-          setShowUsersPanel(false);
+        if (currentView === 'student') {
+          // In student view, allow toggling chat panel
+          const newValue = !showChatPanel;
+          setShowChatPanel(newValue);
+          if (newValue) {
+            // When opening chat, close other panels
+            setShowBreakoutPanel(false);
+            setShowUsersPanel(false);
+          }
+        } else {
+          const newValue = !showChatPanel;
+          setShowChatPanel(newValue);
+          if (newValue) {
+            // When opening chat, close other panels
+            setShowBreakoutPanel(false);
+            setShowUsersPanel(false);
+          }
         }
       }}
       selectedRoom={selectedRoom}

@@ -4,6 +4,8 @@ import Presentation from './components/Presentation';
 import RoomDetails from './components/RoomDetails';
 import ParticipantsGrid from './components/ParticipantsGrid';
 import CompetitionModal from './components/CompetitionModal';
+import CompetitionLeaderboard from './components/CompetitionLeaderboard';
+import { generateGrade6MathQuestions } from './utils/questionGenerator';
 
 // Sample data with full names
 const initialRooms = [
@@ -72,9 +74,14 @@ function App() {
   const [roomNotes, setRoomNotes] = useState({}); // Store notes per room: { roomId: notes }
   const [teacherRoomId, setTeacherRoomId] = useState(null); // Track which room the teacher is in
   const [competitionQuestions, setCompetitionQuestions] = useState(''); // Questions for the learning competition
+  const [parsedQuestions, setParsedQuestions] = useState([]); // Parsed question objects
   const [competitionDuration, setCompetitionDuration] = useState(5); // Duration in minutes
   const [isCompetitionRunning, setIsCompetitionRunning] = useState(false); // Whether competition is active
   const [currentView, setCurrentView] = useState('teacher'); // Current view: 'teacher' or 'student'
+  const [competitionUsers, setCompetitionUsers] = useState([]); // User progress data for competition
+  const [showCompetitionModal, setShowCompetitionModal] = useState(true); // Control modal visibility
+  const [studentAnswers, setStudentAnswers] = useState({}); // Store student answers: { questionId: answer }
+  const [studentCurrentQuestionIndex, setStudentCurrentQuestionIndex] = useState(0); // Current question index for student
 
   const handleUserDrop = (roomId, userName) => {
     // Check if the dragged user is the teacher
@@ -378,18 +385,167 @@ function App() {
     </div>
   ) : null;
 
+  // Calculate and update ranks based on performance
+  const calculateRanks = (users) => {
+    // Sort by performance: first by correct answers (desc), then by completed (desc), then by accuracy
+    const sorted = [...users].sort((a, b) => {
+      // Primary: correct answers
+      if (b.correct !== a.correct) {
+        return b.correct - a.correct;
+      }
+      // Secondary: completed count
+      if (b.completed !== a.completed) {
+        return b.completed - a.completed;
+      }
+      // Tertiary: accuracy percentage
+      const aAccuracy = a.completed > 0 ? a.correct / a.completed : 0;
+      const bAccuracy = b.completed > 0 ? b.correct / b.completed : 0;
+      return bAccuracy - aAccuracy;
+    });
+
+    // Assign ranks (handle ties)
+    let currentRank = 1;
+    return sorted.map((user, index) => {
+      if (index > 0) {
+        const prevUser = sorted[index - 1];
+        const prevCorrect = prevUser.correct;
+        const prevCompleted = prevUser.completed;
+        const prevAccuracy = prevCompleted > 0 ? prevCorrect / prevCompleted : 0;
+        
+        const userCorrect = user.correct;
+        const userCompleted = user.completed;
+        const userAccuracy = userCompleted > 0 ? userCorrect / userCompleted : 0;
+        
+        // Only increment rank if performance is different
+        if (prevCorrect !== userCorrect || prevCompleted !== userCompleted || prevAccuracy !== userAccuracy) {
+          currentRank = index + 1;
+        }
+      } else {
+        currentRank = 1;
+      }
+      
+      return {
+        ...user,
+        rank: currentRank
+      };
+    });
+  };
+
   const handleStartCompetition = () => {
-    if (!competitionQuestions.trim()) {
-      alert('Please enter questions before starting the competition.');
-      return;
+    // Use parsed questions if available, otherwise generate default
+    let questionsToUse = parsedQuestions.length > 0 ? parsedQuestions : generateGrade6MathQuestions();
+    
+    // Ensure parsed questions are set
+    if (parsedQuestions.length === 0) {
+      setParsedQuestions(questionsToUse);
+      setCompetitionQuestions(JSON.stringify(questionsToUse, null, 2));
     }
+    
+    // Get all students (excluding teacher)
+    const allUsers = getAllUsers();
+    const students = allUsers.filter(user => !user.isTeacher);
+    
+    // Count questions
+    const questionCount = questionsToUse.length;
+    
+    // Initialize competition user data with default values
+    const initialCompetitionUsers = students.map((student) => ({
+      fullName: student.fullName,
+      initials: student.initials,
+      completed: 0,
+      correct: 0,
+      rank: 1, // Will be recalculated when there's actual data
+      totalQuestions: questionCount
+    }));
+    
+    // Sort alphabetically initially
+    const sortedAlphabetically = initialCompetitionUsers.sort((a, b) => 
+      a.fullName.localeCompare(b.fullName)
+    );
+    
+    // Reset student state when starting new competition
+    setStudentAnswers({});
+    setStudentCurrentQuestionIndex(0);
+    
+    setCompetitionUsers(sortedAlphabetically);
     setIsCompetitionRunning(true);
-    // TODO: Implement competition start logic
+    setShowCompetitionModal(true); // Show modal when competition starts
+    // TODO: Implement competition start logic and real-time updates
   };
 
   const handleStopCompetition = () => {
     setIsCompetitionRunning(false);
     // TODO: Implement competition stop logic
+  };
+
+  const handleAddTime = (minutes) => {
+    setCompetitionDuration(prev => Math.min(prev + minutes, 60)); // Cap at 60 minutes
+  };
+
+  const handleStudentAnswerUpdate = (studentName, answers, questions) => {
+    // Calculate progress in real-time as student answers questions
+    let completedCount = 0;
+    let correctCount = 0;
+    
+    questions.forEach(question => {
+      const studentAnswer = answers[question.id];
+      if (studentAnswer && studentAnswer.trim() !== '') {
+        completedCount++;
+        
+        // Check if answer is correct
+        const normalizedStudentAnswer = studentAnswer.trim().toLowerCase();
+        const normalizedCorrectAnswer = question.correctAnswer.trim().toLowerCase();
+        
+        let isCorrect = false;
+        if (normalizedStudentAnswer === normalizedCorrectAnswer) {
+          isCorrect = true;
+        } else if (question.type === 'free-text') {
+          // Try numeric comparison for free-text answers
+          const studentNum = parseFloat(normalizedStudentAnswer);
+          const correctNum = parseFloat(normalizedCorrectAnswer);
+          if (!isNaN(studentNum) && !isNaN(correctNum) && Math.abs(studentNum - correctNum) < 0.01) {
+            isCorrect = true;
+          }
+        }
+        
+        if (isCorrect) {
+          correctCount++;
+        }
+      }
+    });
+    
+    // Update competition user data with current progress
+    setCompetitionUsers(prevUsers => {
+      return prevUsers.map(user => {
+        if (user.fullName === studentName) {
+          return {
+            ...user,
+            completed: completedCount,
+            correct: correctCount,
+            totalQuestions: questions.length
+          };
+        }
+        return user;
+      });
+    });
+  };
+
+  const handleStudentAnswersSubmit = ({ studentName, completed, correct, totalQuestions }) => {
+    // Update competition user data with submitted answers
+    setCompetitionUsers(prevUsers => {
+      return prevUsers.map(user => {
+        if (user.fullName === studentName) {
+          return {
+            ...user,
+            completed,
+            correct,
+            totalQuestions,
+            isCompleted: true
+          };
+        }
+        return user;
+      });
+    });
   };
 
 
@@ -420,7 +576,26 @@ function App() {
             <textarea
               id="questions"
               value={competitionQuestions}
-              onChange={(e) => setCompetitionQuestions(e.target.value)}
+              onPaste={(e) => {
+                e.preventDefault();
+                // Auto-generate questions when pasting
+                const questions = generateGrade6MathQuestions();
+                const questionsText = JSON.stringify(questions, null, 2);
+                setCompetitionQuestions(questionsText);
+                setParsedQuestions(questions);
+              }}
+              onChange={(e) => {
+                setCompetitionQuestions(e.target.value);
+                // Try to parse questions if they're in JSON format
+                try {
+                  const parsed = JSON.parse(e.target.value);
+                  if (Array.isArray(parsed)) {
+                    setParsedQuestions(parsed);
+                  }
+                } catch (err) {
+                  // Not valid JSON, keep existing parsed questions
+                }
+              }}
               placeholder="Paste your questions here..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
               rows={8}
@@ -457,27 +632,52 @@ function App() {
           </button>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          {/* Header with Stop Button */}
+          <div className="bg-gray-100 rounded-lg p-3 mb-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-medium text-gray-700">{competitionDuration} minutes</span>
+                <button
+                  onClick={handleStopCompetition}
+                  className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10h6v4H9z" />
+                  </svg>
+                  Stop
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleAddTime(1)}
+                  disabled={competitionDuration >= 60}
+                  className="px-1.5 py-0.5 bg-white border border-gray-300 text-[10px] font-medium text-gray-700 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Add 1 minute"
+                >
+                  +1 min
+                </button>
+                <button
+                  onClick={() => handleAddTime(5)}
+                  disabled={competitionDuration >= 60}
+                  className="px-1.5 py-0.5 bg-white border border-gray-300 text-[10px] font-medium text-gray-700 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Add 5 minutes"
+                >
+                  +5 min
+                </button>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Competition Running</h3>
-            <p className="text-sm text-gray-600 mb-4">Duration: {competitionDuration} minutes</p>
-            <button
-              onClick={handleStopCompetition}
-              className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 mx-auto"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10h6v4H9z" />
-              </svg>
-              Stop Competition
-            </button>
           </div>
+
+          {/* Leaderboard */}
+          {competitionUsers.length > 0 ? (
+            <CompetitionLeaderboard users={competitionUsers} />
+          ) : (
+            <div className="flex items-center justify-center text-sm text-gray-500 py-8">
+              No participants yet
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -485,12 +685,23 @@ function App() {
 
   return (
     <>
-    {/* Competition Modal for Student View - Non-dismissible */}
-    {currentView === 'student' && (
+    {/* Competition Modal for Student View - Alice Anderson */}
+    {currentView === 'student' && isCompetitionRunning && parsedQuestions.length > 0 && (
       <CompetitionModal
-        isOpen={isCompetitionRunning}
-        questions={competitionQuestions}
+        isOpen={showCompetitionModal}
+        questions={parsedQuestions}
         duration={competitionDuration}
+        onBackdropClick={() => setShowCompetitionModal(false)}
+        studentName="Alice Anderson"
+        onSubmitAnswers={handleStudentAnswersSubmit}
+        currentQuestionIndex={studentCurrentQuestionIndex}
+        onQuestionIndexChange={setStudentCurrentQuestionIndex}
+        answers={studentAnswers}
+        onAnswersChange={(newAnswers) => {
+          setStudentAnswers(newAnswers);
+          // Update leaderboard in real-time as answers change
+          handleStudentAnswerUpdate("Alice Anderson", newAnswers, parsedQuestions);
+        }}
       />
     )}
     <Layout 
@@ -503,6 +714,16 @@ function App() {
         // Ensure chat panel is open when switching to student view
         if (newView === 'student') {
           setShowChatPanel(true);
+          // Show modal when switching back to student view during active competition
+          if (isCompetitionRunning && parsedQuestions.length > 0) {
+            setShowCompetitionModal(true);
+          }
+        }
+        // When switching to teacher view during active competition, only show Learning Competition panel
+        if (newView === 'teacher' && isCompetitionRunning) {
+          setShowBreakoutPanel(true);
+          setShowUsersPanel(false);
+          setShowChatPanel(false);
         }
       }}
       onToggleBreakoutPanel={() => {

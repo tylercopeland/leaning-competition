@@ -189,109 +189,121 @@ export default function CompetitionModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">
-              {currentQuestion.question}
-            </h3>
-
-            {currentQuestion.type === 'multiple-choice' ? (
-              <div className="space-y-3">
-                {currentQuestion.options.map((option, index) => (
-                  <label
-                    key={index}
-                    className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      currentAnswer === option
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion.id}`}
-                      value={option}
-                      checked={currentAnswer === option}
-                      onChange={(e) => handleAnswerChange(e.target.value)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                    />
-                    <span className="ml-3 text-gray-700">{option}</span>
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div>
-                <input
-                  type="text"
-                  value={currentAnswer}
-                  onChange={(e) => handleAnswerChange(e.target.value)}
-                  placeholder="Enter your answer..."
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer Navigation */}
-        <div className="p-6 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
-          {isSubmitted ? (
-            <div className="w-full text-center">
-              <div className="flex items-center justify-center gap-2 text-green-600 mb-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {isSubmitted ? (
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center gap-2 text-green-600 mb-4">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-lg font-semibold">Answers Submitted!</span>
+                <span className="text-2xl font-semibold">Answers Submitted!</span>
               </div>
-              <p className="text-sm text-gray-600">Thank you for completing the competition.</p>
+              <p className="text-lg text-gray-600">Thank you for completing the competition.</p>
             </div>
-          ) : (
-            <>
+            <button
+              onClick={() => {
+                if (onBackdropClick) {
+                  onBackdropClick();
+                }
+              }}
+              className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">
+                {currentQuestion.question}
+              </h3>
+
+              {currentQuestion.type === 'multiple-choice' ? (
+                <div className="space-y-3">
+                  {currentQuestion.options.map((option, index) => (
+                    <label
+                      key={index}
+                      className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                        currentAnswer === option
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion.id}`}
+                        value={option}
+                        checked={currentAnswer === option}
+                        onChange={(e) => handleAnswerChange(e.target.value)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="ml-3 text-gray-700">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="text"
+                    value={currentAnswer}
+                    onChange={(e) => handleAnswerChange(e.target.value)}
+                    placeholder="Enter your answer..."
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Footer Navigation */}
+        {!isSubmitted && (
+          <div className="p-6 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
+            <button
+              onClick={handlePrevious}
+              disabled={isFirstQuestion}
+              className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Previous
+            </button>
+
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-sm text-gray-600">
+                {currentQuestionIndex + 1} / {questions.length}
+              </div>
+            </div>
+
+            {isLastQuestion ? (
               <button
-                onClick={handlePrevious}
-                disabled={isFirstQuestion}
-                className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                onClick={handleSubmit}
+                disabled={!allQuestionsAnswered}
+                className={`px-6 py-2 font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                  allQuestionsAnswered
+                    ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                Previous
+                Submit
               </button>
-
-              <div className="flex flex-col items-center gap-1">
-                <div className="text-sm text-gray-600">
-                  {currentQuestionIndex + 1} / {questions.length}
-                </div>
-              </div>
-
-              {isLastQuestion ? (
-                <button
-                  onClick={handleSubmit}
-                  disabled={!allQuestionsAnswered}
-                  className={`px-6 py-2 font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                    allQuestionsAnswered
-                      ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Submit
-                </button>
-              ) : (
-                <button
-                  onClick={handleNext}
-                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  Next
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-            </>
-          )}
-        </div>
+            ) : (
+              <button
+                onClick={handleNext}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                Next
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

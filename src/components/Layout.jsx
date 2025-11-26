@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import MeetingControls from './MeetingControls';
 
-export default function Layout({ children, breakoutRoomsContent, showBreakoutPanel, onToggleBreakoutPanel, usersContent, showUsersPanel, onToggleUsersPanel, chatContent, showChatPanel, onToggleChatPanel, selectedRoom, onLeaveBreakoutRoom, isScreenshareEnabled, setIsScreenshareEnabled }) {
+export default function Layout({ children, breakoutRoomsContent, showBreakoutPanel, onToggleBreakoutPanel, usersContent, showUsersPanel, onToggleUsersPanel, chatContent, showChatPanel, onToggleChatPanel, selectedRoom, onLeaveBreakoutRoom, isScreenshareEnabled, setIsScreenshareEnabled, currentView = 'teacher', onToggleView }) {
   const [breakoutPanelWidth, setBreakoutPanelWidth] = useState(320); // 80 * 4 = 320px (w-80)
   const [usersPanelWidth, setUsersPanelWidth] = useState(320);
   
@@ -118,11 +118,12 @@ export default function Layout({ children, breakoutRoomsContent, showBreakoutPan
           <div className="relative group">
             <button
               onClick={onToggleChatPanel}
+              disabled={currentView === 'student'}
               className={`p-2 rounded transition-colors ${
                 showChatPanel
                   ? 'bg-blue-100 hover:bg-blue-200'
                   : 'hover:bg-gray-100'
-              }`}
+              } ${currentView === 'student' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <svg
                 className={`w-6 h-6 ${
@@ -154,58 +155,64 @@ export default function Layout({ children, breakoutRoomsContent, showBreakoutPan
             </div>
           </div>
           
-          {/* Plugins Icon */}
-          <div className="relative group">
-            <button className="p-2 hover:bg-gray-100 rounded transition-colors">
-              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </button>
-            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-              Plugins
+          {/* Plugins Icon - Hidden in student view */}
+          {currentView === 'teacher' && (
+            <div className="relative group">
+              <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </button>
+              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                Plugins
+              </div>
             </div>
-          </div>
+          )}
           
-          {/* Learning Competition Icon */}
-          <div className="relative group">
-            <button 
-              className={`p-2 rounded transition-colors ${
-                showBreakoutPanel 
-                  ? 'bg-blue-100 hover:bg-blue-200' 
-                  : 'hover:bg-gray-100'
-              }`} 
-              onClick={onToggleBreakoutPanel}
-            >
-              <svg 
-                className={`w-6 h-6 ${
+          {/* Learning Competition Icon - Hidden in student view */}
+          {currentView === 'teacher' && (
+            <div className="relative group">
+              <button 
+                className={`p-2 rounded transition-colors ${
                   showBreakoutPanel 
-                    ? 'text-blue-600' 
-                    : 'text-gray-600'
+                    ? 'bg-blue-100 hover:bg-blue-200' 
+                    : 'hover:bg-gray-100'
                 }`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
+                onClick={onToggleBreakoutPanel}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
-            </button>
-            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-              Learning Competition
+                <svg 
+                  className={`w-6 h-6 ${
+                    showBreakoutPanel 
+                      ? 'text-blue-600' 
+                      : 'text-gray-600'
+                  }`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+              </button>
+              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                Learning Competition
+              </div>
             </div>
-          </div>
+          )}
         </div>
         
-        {/* Analytics Icon - Above Settings */}
-        <div className="relative group mt-auto mb-1">
-          <button className="p-2 hover:bg-gray-100 rounded transition-colors">
-            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </button>
-          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-            Learning Analytics Dashboard
+        {/* Analytics Icon - Above Settings - Hidden in student view */}
+        {currentView === 'teacher' && (
+          <div className="relative group mt-auto mb-1">
+            <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </button>
+            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+              Learning Analytics Dashboard
+            </div>
           </div>
-        </div>
+        )}
         
         {/* Settings Icon - Bottom Left */}
         <div className="relative group">
@@ -283,8 +290,22 @@ export default function Layout({ children, breakoutRoomsContent, showBreakoutPan
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Toolbar */}
             <header className={`h-16 flex items-center justify-between flex-shrink-0 relative ${(showBreakoutPanel || showUsersPanel) ? 'px-6' : 'pl-6 pr-6'}`}>
-              <div className="text-sm font-medium text-gray-700">
-                {selectedRoom ? selectedRoom.name : 'Main Session'}
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-medium text-gray-700">
+                  {selectedRoom ? selectedRoom.name : `Main Session → ${currentView === 'teacher' ? 'Teacher' : 'Student'}`}
+                </div>
+                {!selectedRoom && (
+                  <button
+                    onClick={onToggleView}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 transition-colors flex items-center gap-1.5"
+                    title={`Switch to ${currentView === 'teacher' ? 'Student' : 'Teacher'} view`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    Switch to {currentView === 'teacher' ? 'Student' : 'Teacher'}
+                  </button>
+                )}
               </div>
               
               {/* Top Right Controls */}
@@ -299,14 +320,16 @@ export default function Layout({ children, breakoutRoomsContent, showBreakoutPan
                   </button>
                 ) : (
                   <>
-                    {/* Start Recording Button */}
-                    <button className="flex items-center gap-2 px-4 py-2 bg-transparent border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <circle cx="12" cy="12" r="4" fill="currentColor"/>
-                      </svg>
-                      <span>Start Recording</span>
-                    </button>
+                    {/* Start Recording Button - Hidden in student view */}
+                    {currentView === 'teacher' && (
+                      <button className="flex items-center gap-2 px-4 py-2 bg-transparent border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                          <circle cx="12" cy="12" r="4" fill="currentColor"/>
+                        </svg>
+                        <span>Start Recording</span>
+                      </button>
+                    )}
                     
                     {/* Signal/Activity Indicator */}
                     <div className="w-10 h-10 bg-transparent border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
@@ -338,7 +361,7 @@ export default function Layout({ children, breakoutRoomsContent, showBreakoutPan
 
             {/* Meeting Controls */}
             <div className="flex-shrink-0">
-              <MeetingControls isScreenshareEnabled={isScreenshareEnabled} onScreenshareToggle={setIsScreenshareEnabled} />
+              <MeetingControls isScreenshareEnabled={isScreenshareEnabled} onScreenshareToggle={setIsScreenshareEnabled} currentView={currentView} />
             </div>
       </div>
     </div>

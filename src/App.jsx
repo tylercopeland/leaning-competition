@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import Presentation from './components/Presentation';
 import RoomDetails from './components/RoomDetails';
 import ParticipantsGrid from './components/ParticipantsGrid';
+import CompetitionModal from './components/CompetitionModal';
 
 // Sample data with full names
 const initialRooms = [
@@ -70,6 +71,10 @@ function App() {
   const [roomScreenshare, setRoomScreenshare] = useState({}); // Store screenshare state per room: { roomId: boolean }
   const [roomNotes, setRoomNotes] = useState({}); // Store notes per room: { roomId: notes }
   const [teacherRoomId, setTeacherRoomId] = useState(null); // Track which room the teacher is in
+  const [competitionQuestions, setCompetitionQuestions] = useState(''); // Questions for the learning competition
+  const [competitionDuration, setCompetitionDuration] = useState(5); // Duration in minutes
+  const [isCompetitionRunning, setIsCompetitionRunning] = useState(false); // Whether competition is active
+  const [currentView, setCurrentView] = useState('teacher'); // Current view: 'teacher' or 'student'
 
   const handleUserDrop = (roomId, userName) => {
     // Check if the dragged user is the teacher
@@ -300,22 +305,21 @@ function App() {
         <h2 className="text-sm font-semibold text-gray-800">
           Chat
         </h2>
-        <button
-          onClick={() => setShowChatPanel(false)}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
-          title="Close panel"
-        >
-          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        {currentView === 'teacher' && (
+          <button
+            onClick={() => setShowChatPanel(false)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title="Close panel"
+          >
+            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
       
       {/* Messages Area - Placeholder for now */}
       <div className="flex-1 overflow-y-auto mb-4">
-        <div className="text-sm text-gray-500 text-center mt-8">
-          No messages yet
-        </div>
       </div>
 
       {/* Input Area */}
@@ -374,9 +378,24 @@ function App() {
     </div>
   ) : null;
 
-  const breakoutRoomsContent = () => showBreakoutPanel ? (
-    <div className="h-full">
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+  const handleStartCompetition = () => {
+    if (!competitionQuestions.trim()) {
+      alert('Please enter questions before starting the competition.');
+      return;
+    }
+    setIsCompetitionRunning(true);
+    // TODO: Implement competition start logic
+  };
+
+  const handleStopCompetition = () => {
+    setIsCompetitionRunning(false);
+    // TODO: Implement competition stop logic
+  };
+
+
+  const breakoutRoomsContent = () => showBreakoutPanel && currentView === 'teacher' ? (
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 flex-shrink-0">
         <h2 className="text-sm font-semibold text-gray-800">
           Learning Competition
         </h2>
@@ -390,14 +409,102 @@ function App() {
           </svg>
         </button>
       </div>
+
+      {!isCompetitionRunning ? (
+        <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+          {/* Questions Input */}
+          <div className="flex flex-col gap-2">
+            <label htmlFor="questions" className="text-sm font-medium text-gray-700">
+              Questions
+            </label>
+            <textarea
+              id="questions"
+              value={competitionQuestions}
+              onChange={(e) => setCompetitionQuestions(e.target.value)}
+              placeholder="Paste your questions here..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
+              rows={8}
+            />
+          </div>
+
+          {/* Duration Input */}
+          <div className="flex flex-col gap-2">
+            <label htmlFor="duration" className="text-sm font-medium text-gray-700">
+              Duration (minutes)
+            </label>
+            <input
+              id="duration"
+              type="number"
+              min="1"
+              max="60"
+              value={competitionDuration}
+              onChange={(e) => setCompetitionDuration(parseInt(e.target.value) || 1)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+          </div>
+
+          {/* Start Button */}
+          <button
+            onClick={handleStartCompetition}
+            disabled={!competitionQuestions.trim()}
+            className="w-full px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Start Competition
+          </button>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Competition Running</h3>
+            <p className="text-sm text-gray-600 mb-4">Duration: {competitionDuration} minutes</p>
+            <button
+              onClick={handleStopCompetition}
+              className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 mx-auto"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10h6v4H9z" />
+              </svg>
+              Stop Competition
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   ) : null;
 
   return (
     <>
+    {/* Competition Modal for Student View - Non-dismissible */}
+    {currentView === 'student' && (
+      <CompetitionModal
+        isOpen={isCompetitionRunning}
+        questions={competitionQuestions}
+        duration={competitionDuration}
+      />
+    )}
     <Layout 
       breakoutRoomsContent={breakoutRoomsContent}
-      showBreakoutPanel={showBreakoutPanel}
+      showBreakoutPanel={showBreakoutPanel && currentView === 'teacher'}
+      currentView={currentView}
+      onToggleView={() => {
+        const newView = currentView === 'teacher' ? 'student' : 'teacher';
+        setCurrentView(newView);
+        // Ensure chat panel is open when switching to student view
+        if (newView === 'student') {
+          setShowChatPanel(true);
+        }
+      }}
       onToggleBreakoutPanel={() => {
         const newValue = !showBreakoutPanel;
         setShowBreakoutPanel(newValue);
@@ -419,8 +526,10 @@ function App() {
         }
       }}
       chatContent={chatContent}
-      showChatPanel={showChatPanel}
+      showChatPanel={currentView === 'student' ? true : showChatPanel}
       onToggleChatPanel={() => {
+        // Don't allow closing chat panel in student view
+        if (currentView === 'student') return;
         const newValue = !showChatPanel;
         setShowChatPanel(newValue);
         if (newValue) {

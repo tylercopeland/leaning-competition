@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function MeetingControls({ isScreenshareEnabled, onScreenshareToggle }) {
+export default function MeetingControls({ isScreenshareEnabled, onScreenshareToggle, currentView = 'teacher' }) {
   return (
     <div className="flex items-center justify-center gap-3 py-4">
       {/* Microphone On */}
@@ -17,27 +17,29 @@ export default function MeetingControls({ isScreenshareEnabled, onScreenshareTog
         </svg>
       </button>
 
-      {/* Screen Share */}
-      <button 
-        onClick={() => onScreenshareToggle && onScreenshareToggle(!isScreenshareEnabled)}
-        className={`w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors ${
-          isScreenshareEnabled 
-            ? 'bg-white border-gray-300' 
-            : 'bg-white border-gray-300'
-        }`}
-        title={isScreenshareEnabled ? "Screen Share On" : "Screen Share Off"}
-      >
-        {isScreenshareEnabled ? (
-          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5l14 14" />
-          </svg>
-        )}
-      </button>
+      {/* Screen Share - Hidden in student view */}
+      {currentView === 'teacher' && (
+        <button 
+          onClick={() => onScreenshareToggle && onScreenshareToggle(!isScreenshareEnabled)}
+          className={`w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors ${
+            isScreenshareEnabled 
+              ? 'bg-white border-gray-300' 
+              : 'bg-white border-gray-300'
+          }`}
+          title={isScreenshareEnabled ? "Screen Share On" : "Screen Share Off"}
+        >
+          {isScreenshareEnabled ? (
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5l14 14" />
+            </svg>
+          )}
+        </button>
+      )}
 
       {/* Add Reaction / Participant */}
       <button className="w-10 h-10 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors" title="Add Reaction">

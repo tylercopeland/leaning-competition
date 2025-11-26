@@ -21,12 +21,7 @@ export default function ChatPanel({ messages = [], onSendMessage }) {
     <div className="h-full flex flex-col min-h-0">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 mb-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-8">
-            <p className="text-sm">No messages yet</p>
-            <p className="text-xs mt-2">Start a conversation</p>
-          </div>
-        ) : (
+        {messages.length > 0 && (
           <div className="space-y-3">
             {messages.map((message, index) => (
               <div key={index} className="flex flex-col">
